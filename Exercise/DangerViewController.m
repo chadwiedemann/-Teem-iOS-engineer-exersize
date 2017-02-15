@@ -8,10 +8,11 @@
 
 #import "DangerViewController.h"
 #import "Alarm.h"
+#import "AlarmSystem.h"
+#import "AlarmDictionaryKeys.h"
 
 @interface DangerViewController()
 @property (nonatomic, weak) IBOutlet UISlider *dangerSlider;
-@property BOOL alarmCurrentlyActive;
 @end
 
 @implementation DangerViewController
@@ -19,35 +20,28 @@
 #pragma mark - view controller lifecycle methods
 -(void)viewDidLoad
 {
+    //sets the slider at .5 on every launch
+    self.dangerSlider.value = .5;
+    
     //retrieves last settins
     NSUserDefaults *settings = [NSUserDefaults standardUserDefaults];
     
+    //sets the alarm activity state in the alarm system
+    AlarmSystem *currentAlarmSettings = [AlarmSystem sharedInstanceOfAlarmSystem];
+    currentAlarmSettings.dangerLevel = .5;
     //sets the default state of the alarm and activates the alarm if conditions are met
-    self.dangerSlider.value = .5;
-    if(![settings boolForKey:@"firstLaunch"]){
-        [settings setBool:true forKey:@"firstLaunch"];
-        [settings setBool:true forKey:@"Alarm Enabled"];
-        [settings setFloat:.9 forKey:@"Alarm Threshold"];
-        self.alarmCurrentlyActive = false;
-    }else if ([settings floatForKey:@"Alarm Threshold"] < self.dangerSlider.value && [settings boolForKey:@"Alarm Enabled"] && !self.alarmCurrentlyActive){
-        activateAlarm();
-        self.alarmCurrentlyActive = true;
-    }
-    
-    //saves the initial danger level of the alarm
-    [settings setFloat:.5 forKey:@"Danger Level"];
-}
-
--(void)viewWillAppear:(BOOL)animated
-{
-    //retrieves the settins of the alarm
-    NSUserDefaults *settings = [NSUserDefaults standardUserDefaults];
-    
-    //captures and stores the state of the alarm when the view appears
-    if (self.dangerSlider.value >= [settings floatForKey:@"Alarm Threshold"] && [settings boolForKey:@"Alarm Enabled"]) {
-        self.alarmCurrentlyActive = true;
-    }else{
-        self.alarmCurrentlyActive = false;
+    if(![settings boolForKey:FirstLaunch]){
+        [settings setBool:true forKey:FirstLaunch];
+        [settings setBool:true forKey:AlarmEnabled];
+        [settings setFloat:.9 forKey:AlarmThreshold];
+        [settings setFloat:.5 forKey:AlarmDangerLevel];
+        currentAlarmSettings.alarmEnabled = true;
+        currentAlarmSettings.alarmThreshold = .9;
+        [currentAlarmSettings activateOrDeactivateAlarm];
+    }else {
+        currentAlarmSettings.alarmThreshold = [settings floatForKey:AlarmThreshold];
+        currentAlarmSettings.alarmEnabled = [settings boolForKey:AlarmEnabled];
+        [currentAlarmSettings activateOrDeactivateAlarm];
     }
 }
 
@@ -55,20 +49,16 @@
 - (IBAction)dangerSliderValueChanged:(UISlider *)sender
 {
     // TODO: Change the danger value.
+    //activates or deactivates the alarm whenslider is moved
+    AlarmSystem *currentAlarmSettings = [AlarmSystem sharedInstanceOfAlarmSystem];
+    currentAlarmSettings.dangerLevel = sender.value;
+    [currentAlarmSettings activateOrDeactivateAlarm];
     
     //retrieves the settings of the alarm
     NSUserDefaults *settings = [NSUserDefaults standardUserDefaults];
     
-    //turns the alarm on or off if the conditions are met
-    if (sender.value >= [settings floatForKey:@"Alarm Threshold"] && [settings boolForKey:@"Alarm Enabled"] && !self.alarmCurrentlyActive) {
-        activateAlarm();
-        self.alarmCurrentlyActive = true;
-    } else if (sender.value < [settings floatForKey:@"Alarm Threshold"] && [settings boolForKey:@"Alarm Enabled"] && self.alarmCurrentlyActive){
-        deactivateAlarm();
-        self.alarmCurrentlyActive = false;
-    }
-    
     //saves the new danger level of the alarm
-    [settings setFloat:sender.value forKey:@"Danger Level"];
+    [settings setFloat:sender.value forKey:AlarmDangerLevel];
 }
+
 @end

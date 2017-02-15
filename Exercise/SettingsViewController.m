@@ -8,11 +8,12 @@
 
 #import "SettingsViewController.h"
 #import "Alarm.h"
+#import "AlarmSystem.h"
+#import "AlarmDictionaryKeys.h"
 
 @interface SettingsViewController()
 @property (nonatomic, weak) IBOutlet UISlider *alarmThresholdSlider;
 @property (nonatomic, weak) IBOutlet UISwitch *alarmEnabledSwitch;
-@property BOOL alarmCurrentlyActive;
 @end
 
 @implementation SettingsViewController
@@ -24,17 +25,11 @@
     NSUserDefaults *settings = [NSUserDefaults standardUserDefaults];
     
     //sets the switch to the last selected position
-    self.alarmEnabledSwitch.on = [settings boolForKey:@"Alarm Enabled"];
+    self.alarmEnabledSwitch.on = [settings boolForKey:AlarmEnabled];
     
     //sets the sliders value to the last selected value
-    self.alarmThresholdSlider.value = [settings floatForKey:@"Alarm Threshold"];
+    self.alarmThresholdSlider.value = [settings floatForKey:AlarmThreshold];
     
-    //tracks if the alarm state is active or deactive
-    if([settings floatForKey:@"Danger Level"] >= self.alarmThresholdSlider.value && [settings boolForKey:@"Alarm Enabled"]){
-        self.alarmCurrentlyActive = true;
-    }else{
-        self.alarmCurrentlyActive = false;
-    }
 }
 
 #pragma mark Actions
@@ -47,39 +42,33 @@
 {
     // TODO: Change the alarm activation threshold.
     
+    //Activates or deactivates alarm when threshold slider moves
+    AlarmSystem *currentAlarmSettings = [AlarmSystem sharedInstanceOfAlarmSystem];
+    currentAlarmSettings.alarmThreshold = sender.value;
+    [currentAlarmSettings activateOrDeactivateAlarm];
+    
     //retrieves last settings
     NSUserDefaults *settings = [NSUserDefaults standardUserDefaults];
     
-    //This code activates or deactivates the alarm if the slider is moved into or out of the dange zone and the alarm is enabled
-    if ([settings floatForKey:@"Danger Level"] >= sender.value && [settings boolForKey:@"Alarm Enabled"] && !self.alarmCurrentlyActive) {
-        activateAlarm();
-        self.alarmCurrentlyActive = true;
-    }else if ([settings floatForKey:@"Danger Level"] < sender.value && self.alarmCurrentlyActive){
-        deactivateAlarm();
-        self.alarmCurrentlyActive = false;
-    }
-    
     //this saves the new alarm threshold
-    [settings setFloat:sender.value forKey:@"Alarm Threshold"];
+    [settings setFloat:sender.value forKey:AlarmThreshold];
+    
 }
 
 - (IBAction)alarmEnabledSwitchValueChanged:(UISwitch *)sender
 {
     // TODO: Toggle whether the alarm is enabled.
     
+    //activates or deactivates the alarm when enabled switch is tapped
+    AlarmSystem *currentAlarmSettings = [AlarmSystem sharedInstanceOfAlarmSystem];
+    currentAlarmSettings.alarmEnabled = sender.on;
+    [currentAlarmSettings activateOrDeactivateAlarm];
+    
     //retrieves last settings
     NSUserDefaults *settings = [NSUserDefaults standardUserDefaults];
     
-    //this activates or deactivates the alarm if the alarm is enabled and the threshold is in the danger zone
-    if ([sender isOn] && [settings floatForKey:@"Danger Level"] >= self.alarmThresholdSlider.value) {
-        activateAlarm();
-        self.alarmCurrentlyActive = true;
-    }else if (self.alarmCurrentlyActive){
-        deactivateAlarm();
-        self.alarmCurrentlyActive = false;
-    }
-    
     //saves the new alarm enabled status
-    [settings setBool:self.alarmEnabledSwitch.on forKey:@"Alarm Enabled"];
+    [settings setBool:self.alarmEnabledSwitch.on forKey:AlarmEnabled];
+    
 }
 @end
